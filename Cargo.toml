@@ -1,0 +1,18 @@
+[package]
+name = "cloudconsole"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thrussh = { version = "0.33", features = ["openssl"] }
+thrussh-keys = { version = "0.21", features = ["openssl"] }
+openssl = "0.10"
+
+maxminddb = "0.23"
+
+futures = "0.3"
+tokio = { version = "1.20", features = ["full"] }
+
+anyhow = "1.0"
