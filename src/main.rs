@@ -9,6 +9,7 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
+    // keys::print_rsa_pem(keys::generate_rsa(4096));
     let rsa_pair = keys::load_rsa_pem("./config/ssh_server.key");
     let server_keys = thrussh_keys::key::KeyPair::RSA {
         key: rsa_pair,
