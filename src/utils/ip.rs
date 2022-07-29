@@ -43,7 +43,7 @@ pub fn ipaddr_lookup(addr: SocketAddr) -> String {
                 location.push_str("Unknown")
             }
             location
-        },
+        }
         Err(_) => "Unknown".to_string(),
     }
 }

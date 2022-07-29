@@ -1,16 +1,34 @@
+use anyhow::Result as anyhowResult;
+use crossterm::{
+    event, execute,
+    style::{Color, Print, ResetColor, SetBackgroundColor, SetForegroundColor},
+    ExecutableCommand, Result,
+};
+use crossterm::event::{read, Event};
 use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use thrussh::server::{Auth, Session};
 use thrussh::*;
-use thrussh_keys::key::{SignatureHash, Name};
+use thrussh_keys::key::{Name, SignatureHash};
 
 mod keys;
+mod term;
 mod utils;
+
+const SSH_SERVER_KEY_PATH: &str = "./config/ssh_server_key";
 
 #[tokio::main]
 async fn main() {
-    // keys::print_rsa_pem(keys::generate_rsa(4096));
-    let rsa_pair = keys::load_rsa_pem("./config/ssh_server.key");
+    if !Path::new(SSH_SERVER_KEY_PATH).exists() {
+        println!("Generating SSH server key...");
+        let key_pair = keys::generate_rsa(4096);
+        let private_key = key_pair.private_key_to_pem().unwrap();
+        fs::write(SSH_SERVER_KEY_PATH, private_key).unwrap();
+    }
+
+    let rsa_pair = keys::load_rsa_pem(SSH_SERVER_KEY_PATH);
     let server_keys = thrussh_keys::key::KeyPair::RSA {
         key: rsa_pair,
         hash: SignatureHash::SHA2_256,
@@ -60,9 +78,9 @@ impl server::Server for Server {
 
 impl server::Handler for Server {
     type Error = anyhow::Error;
-    type FutureAuth = futures::future::Ready<Result<(Self, server::Auth), anyhow::Error>>;
-    type FutureUnit = futures::future::Ready<Result<(Self, Session), anyhow::Error>>;
-    type FutureBool = futures::future::Ready<Result<(Self, Session, bool), anyhow::Error>>;
+    type FutureAuth = futures::future::Ready<anyhowResult<(Self, server::Auth), anyhow::Error>>;
+    type FutureUnit = futures::future::Ready<anyhowResult<(Self, Session), anyhow::Error>>;
+    type FutureBool = futures::future::Ready<anyhowResult<(Self, Session, bool), anyhow::Error>>;
 
     fn finished_auth(self, auth: Auth) -> Self::FutureAuth {
         futures::future::ready(Ok((self, auth)))
@@ -74,7 +92,7 @@ impl server::Handler for Server {
         futures::future::ready(Ok((self, s)))
     }
 
-    fn auth_password(self, user: &str, password: &str) -> Self::FutureAuth {
+    fn auth_password(self, _: &str, _: &str) -> Self::FutureAuth {
         self.finished_auth(Auth::Accept)
     }
 
@@ -90,8 +108,24 @@ impl server::Handler for Server {
             }
         }
 
-        session.data(channel, CryptoVec::from_slice(format!("Hello, my friend from {}. :)\n\r", ipaddr).as_bytes().as_ref()));
-        session.data(channel, CryptoVec::from_slice(b">"));
+        session.data(
+            channel,
+            CryptoVec::from_slice(format!("{esc}c", esc = 27 as char).as_bytes().as_ref()),
+        );
+        // session.data(channel, CryptoVec::from_slice(format!("Hello, my friend from {}. :)\n\r", ipaddr).as_bytes().as_ref()));
+        // session.data(channel, CryptoVec::from_slice(b">"));
+
+        let mut term = term::Term::new(channel, &mut session);
+
+        execute!(
+            term,
+            SetForegroundColor(Color::Blue),
+            SetBackgroundColor(Color::Red),
+            Print("Styled text here."),
+            ResetColor
+        )
+        .unwrap();
+
         self.finished(session)
     }
 

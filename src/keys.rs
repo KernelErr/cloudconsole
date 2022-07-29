@@ -3,9 +3,9 @@ use openssl::rsa::Rsa;
 use openssl::pkey::Private;
 use std::fs;
 
-// pub fn generate_rsa(bits: usize) -> Rsa<Private> {
-//     openssl::rsa::Rsa::generate(bits as u32).unwrap()
-// }
+pub fn generate_rsa(bits: usize) -> Rsa<Private> {
+    openssl::rsa::Rsa::generate(bits as u32).unwrap()
+}
 
 // pub fn print_rsa_pem(key_pair: Rsa<Private>) {
 //     println!("{}", String::from_utf8(key_pair.public_key_to_pem().unwrap()).unwrap());
